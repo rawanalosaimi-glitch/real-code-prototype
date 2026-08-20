@@ -6,6 +6,7 @@ import { AlertTriangle, Siren, Phone, XCircle, Radio, MapPin, Activity, Shield, 
 import { EmergencyGPS } from "@/components/EmergencyGPS";
 import { AIAssistant } from "@/components/AIAssistant";
 import { PolicyMapping } from "@/components/PolicyMapping";
+import { AnomalyDetection } from "@/components/AnomalyDetection";
 
 export default function AlaradApp() {
   const [emergencyActive, setEmergencyActive] = useState(false);
@@ -209,58 +210,7 @@ export default function AlaradApp() {
           </div>
         );
       case "anomaly":
-        return (
-          <div className="space-y-6">
-            <h2 className="text-2xl font-bold text-slate-800">Anomaly Detection</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {[
-                { label: "Risk Score", value: "87/100", color: "text-red-600", desc: "Elevated risk detected" },
-                { label: "Anomalies Found", value: "3", color: "text-amber-600", desc: "In last 24 hours" },
-                { label: "Model Accuracy", value: "94.2%", color: "text-emerald-600", desc: "Current model performance" },
-              ].map((stat) => (
-                <Card key={stat.label} className="shadow-md">
-                  <CardContent className="pt-6">
-                    <p className="text-sm text-slate-500">{stat.label}</p>
-                    <p className={`text-3xl font-bold ${stat.color}`}>{stat.value}</p>
-                    <p className="text-xs text-slate-400 mt-1">{stat.desc}</p>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-            <Card className="shadow-md">
-              <CardHeader>
-                <CardTitle className="text-lg font-semibold">Detected Anomalies</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {[
-                  { time: "14:32", location: "Waste Storage", type: "Dose rate spike", severity: "Critical" },
-                  { time: "13:15", location: "Zone C", type: "Unauthorized access", severity: "Warning" },
-                  { time: "11:40", location: "Zone B", type: "Sensor drift", severity: "Info" },
-                ].map((anomaly) => (
-                  <div key={anomaly.time} className="bg-slate-50 rounded-lg p-3 border border-slate-200">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium text-sm">{anomaly.type}</p>
-                        <p className="text-xs text-slate-500">{anomaly.location} • {anomaly.time}</p>
-                      </div>
-                      <Badge
-                        className={
-                          anomaly.severity === "Critical"
-                            ? "bg-red-100 text-red-800"
-                            : anomaly.severity === "Warning"
-                            ? "bg-amber-100 text-amber-800"
-                            : "bg-blue-100 text-blue-800"
-                        }
-                      >
-                        {anomaly.severity}
-                      </Badge>
-                    </div>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-          </div>
-        );
+        return <AnomalyDetection />;
       default:
         return (
           <div className="space-y-6">
@@ -323,6 +273,12 @@ export default function AlaradApp() {
                 </Card>
               ))}
             </div>
+
+            <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-3">
+              Illustrative prototype values. These dose figures are simulated for demonstration only
+              and must be replaced with data from calibrated dosimetry systems before any clinical or
+              regulatory use.
+            </p>
 
             {/* Main Content */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
