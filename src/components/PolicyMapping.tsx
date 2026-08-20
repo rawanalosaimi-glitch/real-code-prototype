@@ -1,58 +1,87 @@
+import { useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { BookOpen, FileText, Link2 } from "lucide-react";
+import { ArrowRight, BookOpen, FileText, Link2 } from "lucide-react";
+import { generateReadings, runAnomalyModel } from "@/lib/anomaly";
+import { CHUNKS, DOC_BY_ID } from "@/lib/rag/corpus";
 
-const mappings = [
+// AI COMPONENT -> RISK DETECTION -> APPLICABLE POLICY -> NRRC/IAEA -> REQUIREMENT -> ACTION
+const RULES: {
+  component: string;
+  risk: string;
+  chunkId: string;
+  trigger: (m: ReturnType<typeof runAnomalyModel>) => boolean;
+}[] = [
   {
-    event: "Dose rate spike detected in Waste Storage",
-    policy: "NRRC RSR Art. 12 — Control of radioactive waste areas",
-    action: "Restrict access, notify RSO within 1 hour, log incident",
-    status: "Mapped",
+    component: "Anomaly detection (EWMA + z-score)",
+    risk: "Elevated ambient dose rate in a controlled area",
+    chunkId: "nrrc-waste-areas",
+    trigger: (m) => m.anomalies.some((a) => a.severity === "Critical"),
   },
   {
-    event: "Staff member entered restricted zone",
-    policy: "IAEA GSR Part 3 — Requirement 24 (Access control)",
-    action: "Verify authorization, review dosimeter reading, retrain staff",
-    status: "Mapped",
+    component: "Time-series forecast (least squares)",
+    risk: "Projected exposure approaching the applicable dose limit",
+    chunkId: "nrrc-dose-limits",
+    trigger: (m) => m.slopePerHour > 0.05,
   },
   {
-    event: "Dose limit approaching for EMP-003",
-    policy: "IAEA BSS — Occupational dose limit 20 mSv/year",
-    action: "Reassign duties, schedule medical review",
-    status: "Action Required",
+    component: "Risk scoring model",
+    risk: "Aggregate facility risk above the review threshold",
+    chunkId: "iaea-risk-assessment",
+    trigger: (m) => m.riskScore >= 55,
   },
   {
-    event: "Dosimeter calibration overdue",
-    policy: "Facility SOP RS-07 — Instrument calibration schedule",
-    action: "Calibrate within 30 days, document results",
-    status: "Pending",
+    component: "Access & zone monitoring",
+    risk: "Unverified presence in a restricted zone",
+    chunkId: "iaea-access-control",
+    trigger: (m) => m.scored.some((s) => s.room.includes("Restricted") && s.anomaly),
+  },
+  {
+    component: "Optimisation advisor",
+    risk: "Exposure time reducible under ALARA",
+    chunkId: "iaea-optimisation",
+    trigger: () => true,
+  },
+  {
+    component: "Dose record governance",
+    risk: "Confidential dose data accessed outside radiation protection scope",
+    chunkId: "facility-data-privacy",
+    trigger: () => true,
   },
 ];
-
-const documents = [
-  { title: "NRRC Radiation Safety Regulations", version: "v3.1", clauses: 84 },
-  { title: "IAEA GSR Part 3 — Basic Safety Standards", version: "2014", clauses: 132 },
-  { title: "Facility ALARA Program", version: "v2.4", clauses: 41 },
-  { title: "Emergency Response Plan", version: "v1.9", clauses: 27 },
-];
-
-const badgeClass = (status: string) =>
-  status === "Mapped"
-    ? "bg-emerald-100 text-emerald-800"
-    : status === "Action Required"
-    ? "bg-red-100 text-red-800"
-    : "bg-amber-100 text-amber-800";
 
 export function PolicyMapping() {
+  const [seed] = useState(7);
+  const model = useMemo(() => runAnomalyModel(generateReadings(seed)), [seed]);
+
+  const rows = RULES.map((rule) => {
+    const chunk = CHUNKS.find((c) => c.id === rule.chunkId)!;
+    const doc = DOC_BY_ID[chunk.docId]!;
+    const active = rule.trigger(model);
+    return { rule, chunk, doc, active };
+  });
+
+  const activeCount = rows.filter((r) => r.active).length;
+
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold text-slate-800">Policy Mapping</h2>
+      <div>
+        <h2 className="text-2xl font-bold text-slate-800">Policy Mapping</h2>
+        <p className="text-sm text-slate-500">
+          AI component → risk detection → applicable policy → issuing body → requirement → action.
+          Triggers are evaluated against the live anomaly-detection model output.
+        </p>
+      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {[
-          { label: "Events Mapped", value: "128", desc: "Last 30 days" },
-          { label: "Compliance Rate", value: "96.1%", desc: "Against NRRC & IAEA" },
-          { label: "Open Actions", value: "2", desc: "Require RSO review" },
+          { label: "Mapped Rules", value: String(rows.length), desc: "AI outputs linked to policy" },
+          { label: "Currently Triggered", value: String(activeCount), desc: "From live model output" },
+          {
+            label: "Model Risk Score",
+            value: `${model.riskScore}/100`,
+            desc: `${model.riskLabel} risk`,
+          },
         ].map((stat) => (
           <Card key={stat.label} className="shadow-md">
             <CardContent className="pt-6">
@@ -68,23 +97,48 @@ export function PolicyMapping() {
         <CardHeader>
           <CardTitle className="text-lg font-semibold flex items-center gap-2">
             <Link2 className="h-5 w-5 text-indigo-600" />
-            Event → Policy Mapping
+            Mapping Chain
           </CardTitle>
-          <CardDescription>Each detected event is linked to its governing requirement</CardDescription>
+          <CardDescription>Each AI signal resolves to a citable requirement and an action</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
-          {mappings.map((m) => (
-            <div key={m.event} className="bg-slate-50 rounded-lg p-4 border border-slate-200">
-              <div className="flex items-start justify-between gap-4">
-                <div className="space-y-1">
-                  <p className="font-medium text-sm text-slate-800">{m.event}</p>
-                  <p className="text-xs text-slate-500 flex items-center gap-1">
-                    <FileText className="h-3 w-3" />
-                    {m.policy}
-                  </p>
-                  <p className="text-xs text-slate-600">Required action: {m.action}</p>
+          {rows.map(({ rule, chunk, doc, active }) => (
+            <div
+              key={rule.chunkId + rule.component}
+              className={`rounded-lg p-4 border ${
+                active ? "border-red-200 bg-red-50/50" : "border-slate-200 bg-slate-50"
+              }`}
+            >
+              <div className="flex items-center justify-between gap-4 flex-wrap">
+                <div className="flex items-center gap-2 text-xs text-slate-600 flex-wrap">
+                  <span className="font-semibold text-slate-800">{rule.component}</span>
+                  <ArrowRight className="h-3 w-3 text-slate-400" />
+                  <span>{rule.risk}</span>
+                  <ArrowRight className="h-3 w-3 text-slate-400" />
+                  <Badge className="bg-slate-200 text-slate-800">{doc.issuer}</Badge>
                 </div>
-                <Badge className={badgeClass(m.status)}>{m.status}</Badge>
+                <Badge className={active ? "bg-red-100 text-red-800" : "bg-emerald-100 text-emerald-800"}>
+                  {active ? "Action Required" : "Monitoring"}
+                </Badge>
+              </div>
+
+              <div className="mt-3 space-y-1">
+                <p className="text-xs text-slate-500 flex items-center gap-1">
+                  <FileText className="h-3 w-3" />
+                  <a
+                    href={doc.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="hover:text-indigo-600 underline decoration-dotted"
+                  >
+                    {doc.title}
+                  </a>
+                  — {chunk.section} • Page {chunk.page}
+                </p>
+                <p className="text-xs text-slate-600">Requirement: {chunk.text.slice(0, 190)}…</p>
+                <p className="text-xs font-medium text-emerald-800">
+                  Action: {chunk.recommendedAction}
+                </p>
               </div>
             </div>
           ))}
@@ -95,17 +149,23 @@ export function PolicyMapping() {
         <CardHeader>
           <CardTitle className="text-lg font-semibold flex items-center gap-2">
             <BookOpen className="h-5 w-5 text-slate-500" />
-            Reference Documents
+            Indexed Reference Documents
           </CardTitle>
         </CardHeader>
         <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {documents.map((doc) => (
-            <div key={doc.title} className="bg-slate-50 rounded-lg p-3 border border-slate-200">
+          {Object.values(DOC_BY_ID).map((doc) => (
+            <a
+              key={doc.id}
+              href={doc.url}
+              target="_blank"
+              rel="noreferrer"
+              className="bg-slate-50 rounded-lg p-3 border border-slate-200 hover:border-indigo-300 transition-colors"
+            >
               <p className="font-medium text-sm text-slate-800">{doc.title}</p>
               <p className="text-xs text-slate-500">
-                {doc.version} • {doc.clauses} clauses indexed
+                {doc.reference} • {CHUNKS.filter((c) => c.docId === doc.id).length} chunks indexed
               </p>
-            </div>
+            </a>
           ))}
         </CardContent>
       </Card>
