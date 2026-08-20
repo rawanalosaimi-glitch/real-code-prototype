@@ -15,7 +15,7 @@ const suggestions = [
 ];
 
 const cannedAnswer =
-    "Based on the current monitoring data, dose rates in Zones A and B are within normal limits. Waste Storage shows a spike at 2.3x threshold — restrict access and follow ALARA procedures: reduce time, increase distance, add shielding.",
+    "Based on the current monitoring data, dose rates in Zones A and B are within normal limits. Waste Storage shows a spike at 2.3x threshold — restrict access and follow ALARA procedures: reduce time, increase distance, add shielding.";
 
 export function AIAssistant() {
   const [messages, setMessages] = useState<Message[]>([
