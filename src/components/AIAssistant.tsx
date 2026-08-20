@@ -14,10 +14,8 @@ const suggestions = [
   "What are the ALARA steps for a dose rate spike?",
 ];
 
-const canned: Record<string, string> = {
-  default:
+const cannedAnswer =
     "Based on the current monitoring data, dose rates in Zones A and B are within normal limits. Waste Storage shows a spike at 2.3x threshold — restrict access and follow ALARA procedures: reduce time, increase distance, add shielding.",
-};
 
 export function AIAssistant() {
   const [messages, setMessages] = useState<Message[]>([
@@ -33,7 +31,7 @@ export function AIAssistant() {
     setMessages((prev) => [
       ...prev,
       { role: "user", text },
-      { role: "assistant", text: canned.default },
+      { role: "assistant", text: cannedAnswer },
     ]);
     setInput("");
   };

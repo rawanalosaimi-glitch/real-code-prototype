@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { AlertTriangle, Siren, Phone, XCircle, Radio, MapPin, Activity, Shield, Bell, LayoutDashboard, Users, BellRing, History, Brain, Radar, Link2, Menu, X } from "lucide-react";
+import { AlertTriangle, Siren, Phone, XCircle, Radio, MapPin, Activity, Shield, Bell, Bot, LayoutDashboard, Users, BellRing, History, Brain, Radar, Link2, Menu, X } from "lucide-react";
 import { EmergencyGPS } from "@/components/EmergencyGPS";
 import { AIAssistant } from "@/components/AIAssistant";
 import { PolicyMapping } from "@/components/PolicyMapping";
